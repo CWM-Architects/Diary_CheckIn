@@ -6,8 +6,7 @@
  * 修正：僅 admin_list 內的 userId 才是管理員，其餘為員工
  */
 const ADMIN_LIST = [
-  "U20abea6d8991c26cfc8e9c98dc999c0f",
-  "U1558097f933b72938d3098c201c28955"
+  "U2d41f01c6ebbd983368d958ca4b940bf",
 ];
 
 // DbOperations.gs - 修正後的 writeEmployee_ 函數
