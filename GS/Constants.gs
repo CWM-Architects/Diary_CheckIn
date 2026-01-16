@@ -3,7 +3,7 @@
 // ==================== LINE 登入設定 ====================
 const LINE_CHANNEL_ID     = PropertiesService.getScriptProperties().getProperty("LINE_CHANNEL_ID");
 const LINE_CHANNEL_SECRET = PropertiesService.getScriptProperties().getProperty("LINE_CHANNEL_SECRET");
-const LINE_REDIRECT_URL   = "https://CWM-Architects.github.io/Diary_CheckIn/";
+const LINE_REDIRECT_URL   = "https://cwm-architects.github.io/Diary_CheckIn/";
 
 // ==================== Session 設定 ====================
 const SESSION_TTL_MS = 7000 * 60 * 60 * 24; // 1 天
@@ -401,4 +401,5 @@ function showInvoiceColumnMapping() {
   Logger.log('');
   Logger.log('═══════════════════════════════════════');
   Logger.log(`📊 總計: ${INVOICE_HEADERS.length} 個欄位`);
+
 }
