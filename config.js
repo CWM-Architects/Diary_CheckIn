@@ -2,7 +2,7 @@
 
 const API_CONFIG = {
   // 正式環境的 API URL
-  apiUrl: "https://script.google.com/macros/s/AKfycbynjVkSQgmEXNNe8SHnlWkeVGzyAQeA5RMJxwgsMw/dev",
+  apiUrl: "https://script.google.com/macros/s/AKfycbzlJK72AMYzll3DHSj_58XeVwyxwEHvv-BqwS5IZA4wubPiRvhrgFf0eCeFWs18P1E/exec",
 
   // 新增回呼網址
   redirectUrl: "https://cwm-architects.github.io/Diary_CheckIn/"
@@ -13,3 +13,4 @@ const API_CONFIG = {
 // 👇 新增：為了兼容性，同時定義全域變數 apiUrl
 
 const apiUrl = API_CONFIG.apiUrl;
+
