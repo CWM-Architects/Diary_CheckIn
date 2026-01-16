@@ -211,6 +211,52 @@ function getMediaType(fileName) {
 }
 
 
+
+/**
+ * ✅ 處理發票 OCR（確保返回普通物件）
+ */
+function handleInvoiceOCR(params) {
+  try {
+    Logger.log('═══════════════════════════════════════');
+    Logger.log('🧾 handleInvoiceOCR 開始');
+    Logger.log('═══════════════════════════════════════');
+    
+    // 驗證 token
+    if (!params.token) {
+      return { ok: false, msg: '缺少 token' };
+    }
+    
+    if (!validateSession(params.token)) {
+      return { ok: false, msg: '未授權或 session 已過期' };
+    }
+    
+    // 驗證圖片資料
+    if (!params.imageData) {
+      return { ok: false, msg: '缺少圖片資料' };
+    }
+    
+    Logger.log('✅ 參數驗證通過');
+    Logger.log('   imageData 長度:', params.imageData.length);
+    
+    const result = processInvoiceOCR(params.imageData, params.fileName);
+    
+    Logger.log('📤 OCR 結果:', result);
+    Logger.log('═══════════════════════════════════════');
+    
+    // ⭐⭐⭐ 關鍵：返回普通物件（不是 ContentService）
+    return result;
+    
+  } catch (error) {
+    Logger.log('❌ handleInvoiceOCR 錯誤:', error);
+    Logger.log('❌ 錯誤堆疊:', error.stack);
+    
+    return { 
+      ok: false, 
+      msg: '系統錯誤：' + error.toString() 
+    };
+  }
+}
+
 /**
  * 🧪 測試 OCR 功能
  */
