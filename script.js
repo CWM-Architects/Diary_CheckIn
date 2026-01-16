@@ -2315,7 +2315,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.removeItem("cachedUser");
         localStorage.removeItem("cacheTime");
         localStorage.removeItem("sessionUserId");
-        window.location.href = API_CONFIG.redirectUrl;
+        // 改為重新整理頁面，這樣無論是本機測試還是線上環境，都會回到原本的登入頁面
+        window.location.reload();
     };
 
     /**
