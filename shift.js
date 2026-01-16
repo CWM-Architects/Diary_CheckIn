@@ -19,7 +19,7 @@ let allMonthShifts = [];
 // 👇 新增：翻譯函式
 function t(code, params = {}) {
     let text = translations[code] || code;
-    
+
     for (const key in params) {
         let paramValue = params[key];
         if (paramValue in translations) {
@@ -33,7 +33,7 @@ function t(code, params = {}) {
 // 👇 新增：載入翻譯檔案
 async function loadTranslations(lang) {
     try {
-        const res = await fetch(`https://eric693.github.io/Ting_check_manager/i18n/${lang}.json`);
+        const res = await fetch(`https://CWM-Architects.github.io/Diary_CheckIn/i18n/${lang}.json`);
         if (!res.ok) {
             throw new Error(`HTTP 錯誤: ${res.status}`);
         }
@@ -56,7 +56,7 @@ function renderTranslations(container = document) {
     elementsToTranslate.forEach(element => {
         const key = element.getAttribute('data-i18n');
         const translatedText = t(key);
-        
+
         if (translatedText !== key) {
             if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
                 element.placeholder = translatedText;
@@ -82,7 +82,7 @@ function renderTranslations(container = document) {
 }
 
 // ========== 初始化 ==========
-document.addEventListener('DOMContentLoaded', async function() { 
+document.addEventListener('DOMContentLoaded', async function () {
     await loadTranslations(currentLang);
     initializeTabs();
     loadEmployees();
@@ -90,18 +90,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadShifts();
     setupEventListeners();
     setupBatchUpload();
-    
+
     // 設定預設日期為今天
     const today = new Date().toISOString().split('T')[0];
     const shiftDateEl = document.getElementById('shift-date');
     if (shiftDateEl) shiftDateEl.value = today;
-    
+
     // 設定篩選日期為本週
     const startOfWeek = new Date();
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(endOfWeek.getDate() + 6);
-    
+
     const filterStartEl = document.getElementById('filter-start-date');
     const filterEndEl = document.getElementById('filter-end-date');
     if (filterStartEl) filterStartEl.value = startOfWeek.toISOString().split('T')[0];
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 function initializeTabs() {
     const tabs = document.querySelectorAll('.shift-tab');
     tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
+        tab.addEventListener('click', function () {
             const tabName = this.getAttribute('data-tab');
             switchTab(tabName);
         });
@@ -125,12 +125,12 @@ function switchTab(tabName) {
         tab.classList.remove('active');
     });
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-    
+
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
     });
     document.getElementById(`${tabName}-tab`).classList.add('active');
-    
+
     // 載入對應資料
     if (tabName === 'view') {
         loadShifts();
@@ -144,15 +144,15 @@ function switchTab(tabName) {
 function setupEventListeners() {
     const addForm = document.getElementById('add-shift-form');
     if (addForm) {
-        addForm.addEventListener('submit', function(e) {
+        addForm.addEventListener('submit', function (e) {
             e.preventDefault();
             addShift();
         });
     }
-    
+
     const shiftTypeEl = document.getElementById('shift-type');
     if (shiftTypeEl) {
-        shiftTypeEl.addEventListener('change', function() {
+        shiftTypeEl.addEventListener('change', function () {
             autoFillShiftTime(this.value);
         });
     }
@@ -169,12 +169,12 @@ function autoFillShiftTime(shiftType) {
         '中班': ['12:00', '20:00'],
         '晚班': ['16:00', '00:00'],
         '全日班': ['08:30', '17:30'],   // ⭐ 修正：8:30-17:30
-        '排休': ['00:00', '00:00'] 
+        '排休': ['00:00', '00:00']
     };
-    
+
     const startTimeInput = document.getElementById('start-time');
     const endTimeInput = document.getElementById('end-time');
-    
+
     if (shiftType === '排休') {
         // 排休時禁用時間選擇
         startTimeInput.value = '00:00';
@@ -205,38 +205,38 @@ function autoFillShiftTime(shiftType) {
 async function loadEmployees() {
     try {
         const token = localStorage.getItem('sessionToken');
-        
+
         // ✅ 步驟 1: 檢查 token
         if (!token) {
             console.error('❌ 沒有 session token');
             showMessage(t('SHIFT_LOGIN_REQUIRED'), 'error');
             return;
         }
-        
+
         console.log('═══════════════════════════════════════');
         console.log('📋 載入員工列表');
         console.log('═══════════════════════════════════════');
         console.log('📡 Token:', token.substring(0, 20) + '...');
         console.log('📡 API URL:', apiUrl);
         console.log('');
-        
+
         // ✅ 步驟 2: 呼叫 API
         const url = `${apiUrl}?action=getAllUsers&token=${token}`;
         console.log('📡 完整 URL:', url);
         console.log('📡 開始呼叫 API...');
-        
+
         const response = await fetch(url);
-        
+
         // ✅ 步驟 3: 檢查 HTTP 狀態
         console.log('📤 HTTP 狀態:', response.status, response.statusText);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP 錯誤: ${response.status} ${response.statusText}`);
         }
-        
+
         // ✅ 步驟 4: 解析 JSON
         const data = await response.json();
-        
+
         console.log('');
         console.log('📤 API 回應:');
         console.log('   - ok:', data.ok);
@@ -246,14 +246,14 @@ async function loadEmployees() {
         console.log('   - users 型別:', typeof data.users);
         console.log('   - users 長度:', data.users ? data.users.length : 'null');
         console.log('');
-        
+
         // ✅ 步驟 5: 檢查回應
         if (data.ok) {
             allEmployees = data.users || [];
-            
+
             console.log('✅ API 回傳成功');
             console.log('   員工數量:', allEmployees.length);
-            
+
             if (allEmployees.length === 0) {
                 console.warn('⚠️ 員工列表是空的');
                 console.warn('   可能原因:');
@@ -266,32 +266,32 @@ async function loadEmployees() {
                 allEmployees.slice(0, 5).forEach((emp, index) => {
                     console.log(`   ${index + 1}. ${emp.name} (${emp.userId}) - ${emp.dept}`);
                 });
-                
+
                 if (allEmployees.length > 5) {
                     console.log(`   ... 還有 ${allEmployees.length - 5} 筆`);
                 }
             }
-            
+
             // ✅ 步驟 6: 填入下拉選單
             console.log('');
             console.log('📝 開始填入員工下拉選單...');
             populateEmployeeSelect();
-            
+
         } else {
             console.error('❌ API 回傳失敗');
             console.error('   原因:', data.msg || '未知錯誤');
             showMessage(data.msg || t('SHIFT_LOAD_EMPLOYEES_FAILED'), 'error');
         }
-        
+
         console.log('═══════════════════════════════════════');
-        
+
     } catch (error) {
         console.error('');
         console.error('❌❌❌ 載入員工列表失敗');
         console.error('錯誤訊息:', error.message);
         console.error('錯誤堆疊:', error.stack);
         console.error('═══════════════════════════════════════');
-        
+
         showMessage(t('SHIFT_LOAD_EMPLOYEES_ERROR') + ': ' + error.message, 'error');
     }
 }
@@ -303,9 +303,9 @@ function populateEmployeeSelect() {
     console.log('');
     console.log('📝 populateEmployeeSelect 開始');
     console.log('───────────────────────────────────────');
-    
+
     const select = document.getElementById('employee-select');
-    
+
     // ✅ 檢查元素是否存在
     if (!select) {
         console.error('❌ 找不到 employee-select 元素');
@@ -313,42 +313,42 @@ function populateEmployeeSelect() {
         console.error('   <select id="employee-select">');
         return;
     }
-    
+
     console.log('✅ 找到 employee-select 元素');
     console.log('   當前選項數量:', select.options.length);
-    
+
     // ✅ 檢查員工列表
     if (!allEmployees) {
         console.error('❌ allEmployees 是 undefined 或 null');
         return;
     }
-    
+
     if (!Array.isArray(allEmployees)) {
         console.error('❌ allEmployees 不是陣列');
         console.error('   型別:', typeof allEmployees);
         console.error('   內容:', allEmployees);
         return;
     }
-    
+
     console.log('✅ allEmployees 驗證通過');
     console.log('   員工數量:', allEmployees.length);
-    
+
     // ✅ 清空並重設為預設選項
     select.innerHTML = '<option value="">請選擇員工</option>';
     console.log('✅ 已重設為預設選項');
-    
+
     if (allEmployees.length === 0) {
         console.warn('⚠️ 沒有員工可以填入');
         select.innerHTML = '<option value="">目前沒有員工資料</option>';
         return;
     }
-    
+
     // ✅ 填入員工選項
     console.log('📝 開始逐筆填入...');
-    
+
     let successCount = 0;
     let failCount = 0;
-    
+
     allEmployees.forEach((emp, index) => {
         try {
             // 驗證必要欄位
@@ -357,41 +357,41 @@ function populateEmployeeSelect() {
                 failCount++;
                 return;
             }
-            
+
             if (!emp.name) {
                 console.warn(`   ⚠️ 第 ${index + 1} 筆: 缺少 name，跳過`);
                 failCount++;
                 return;
             }
-            
+
             const option = document.createElement('option');
             option.value = emp.userId;
             option.textContent = `${emp.name} (${emp.userId})`;
             option.dataset.name = emp.name;
-            
+
             if (emp.dept) {
                 option.textContent += ` - ${emp.dept}`;
             }
-            
+
             select.appendChild(option);
-            
+
             successCount++;
-            
+
             // 只顯示前 5 筆的詳細資訊
             if (index < 5) {
                 console.log(`   ✅ ${index + 1}. ${emp.name} (${emp.userId})`);
             }
-            
+
         } catch (error) {
             console.error(`   ❌ 第 ${index + 1} 筆失敗:`, error.message);
             failCount++;
         }
     });
-    
+
     if (allEmployees.length > 5) {
         console.log(`   ... 還有 ${allEmployees.length - 5} 筆（已略過顯示）`);
     }
-    
+
     console.log('');
     console.log('📊 填入結果:');
     console.log('   成功:', successCount, '筆');
@@ -412,12 +412,12 @@ function populateEmployeeSelect() {
 async function testLoadEmployees() {
     console.log('🧪 手動測試載入員工');
     console.log('');
-    
+
     // 檢查 apiUrl
     console.log('1️⃣ 檢查 apiUrl:');
     console.log('   apiUrl:', typeof apiUrl !== 'undefined' ? apiUrl : '❌ undefined');
     console.log('');
-    
+
     // 檢查 token
     console.log('2️⃣ 檢查 token:');
     const token = localStorage.getItem('sessionToken');
@@ -426,7 +426,7 @@ async function testLoadEmployees() {
         console.log('   token 預覽:', token.substring(0, 20) + '...');
     }
     console.log('');
-    
+
     // 檢查 HTML 元素
     console.log('3️⃣ 檢查 HTML 元素:');
     const select = document.getElementById('employee-select');
@@ -435,13 +435,13 @@ async function testLoadEmployees() {
         console.log('   當前選項數量:', select.options.length);
     }
     console.log('');
-    
+
     // 執行載入
     console.log('4️⃣ 開始載入員工列表...');
     console.log('');
-    
+
     await loadEmployees();
-    
+
     console.log('');
     console.log('5️⃣ 檢查結果:');
     console.log('   allEmployees 存在:', typeof allEmployees !== 'undefined' ? '✅ 是' : '❌ 否');
@@ -458,9 +458,9 @@ async function loadLocations() {
         const token = localStorage.getItem('sessionToken');
         const response = await fetch(`${apiUrl}?action=getLocations&token=${token}`);
         const data = await response.json();
-        
+
         console.log('✅ 地點列表回應:', data);
-        
+
         if (data.ok) {
             allLocations = data.locations || [];
             populateLocationSelects();
@@ -472,23 +472,23 @@ async function loadLocations() {
 
 function populateLocationSelects() {
     const selects = ['shift-location', 'filter-location'];
-    
+
     selects.forEach(id => {
         const select = document.getElementById(id);
         if (!select) return;
-        
+
         const currentValue = select.value;
-        select.innerHTML = id === 'filter-location' ? 
-            '<option value="">全部</option>' : 
+        select.innerHTML = id === 'filter-location' ?
+            '<option value="">全部</option>' :
             '<option value="">請選擇地點</option>';
-        
+
         allLocations.forEach(loc => {
             const option = document.createElement('option');
             option.value = loc.name;
             option.textContent = loc.name;
             select.appendChild(option);
         });
-        
+
         if (currentValue) select.value = currentValue;
     });
 }
@@ -496,12 +496,12 @@ function populateLocationSelects() {
 async function loadShifts(filters = {}) {
     const listContainer = document.getElementById('shift-list');
     if (!listContainer) return;
-    
+
     listContainer.innerHTML = `<div class="loading">${t('SHIFT_LOADING')}</div>`;
-    
+
     try {
         const token = localStorage.getItem('sessionToken');
-        
+
         // 使用預設日期範圍
         if (!filters.startDate && !filters.endDate) {
             const startDateEl = document.getElementById('filter-start-date');
@@ -509,23 +509,23 @@ async function loadShifts(filters = {}) {
             if (startDateEl && startDateEl.value) filters.startDate = startDateEl.value;
             if (endDateEl && endDateEl.value) filters.endDate = endDateEl.value;
         }
-        
+
         const queryParams = new URLSearchParams({
             action: 'getShifts',
             token: token
         });
-        
+
         if (filters.employeeId) queryParams.append('employeeId', filters.employeeId);
         if (filters.startDate) queryParams.append('startDate', filters.startDate);
         if (filters.endDate) queryParams.append('endDate', filters.endDate);
         if (filters.shiftType) queryParams.append('shiftType', filters.shiftType);
         if (filters.location) queryParams.append('location', filters.location);
-        
+
         const response = await fetch(`${apiUrl}?${queryParams}`);
         const data = await response.json();
-        
+
         console.log('✅ 排班回應:', data);
-        
+
         if (data.ok) {
             currentShifts = data.data || [];
             displayShifts(currentShifts);
@@ -541,7 +541,7 @@ async function loadShifts(filters = {}) {
 function displayShifts(shifts) {
     const listContainer = document.getElementById('shift-list');
     if (!listContainer) return;
-    
+
     if (shifts.length === 0) {
         listContainer.innerHTML = `
             <div class="empty-state">
@@ -551,9 +551,9 @@ function displayShifts(shifts) {
         `;
         return;
     }
-    
+
     listContainer.innerHTML = '';
-    
+
     shifts.forEach(shift => {
         const shiftItem = createShiftItem(shift);
         listContainer.appendChild(shiftItem);
@@ -563,12 +563,12 @@ function displayShifts(shifts) {
 function createShiftItem(shift) {
     const div = document.createElement('div');
     div.className = 'shift-item';
-    
+
     const shiftTypeBadge = getShiftTypeBadge(shift.shiftType);
-    
+
     const startTime = formatTimeOnly(shift.startTime);
     const endTime = formatTimeOnly(shift.endTime);
-    
+
     div.innerHTML = `
         <div class="shift-info">
             <h3>${shift.employeeName} ${shiftTypeBadge}</h3>
@@ -582,7 +582,7 @@ function createShiftItem(shift) {
             <button class="btn-icon btn-danger" onclick="deleteShift('${shift.shiftId}')">${t('BTN_DELETE')}</button>
         </div>
     `;
-    
+
     return div;
 }
 function getShiftTypeBadge(shiftType) {
@@ -594,7 +594,7 @@ function getShiftTypeBadge(shiftType) {
         '排休': 'badge-dayoff',
         '自訂': 'badge-custom'
     }[shiftType] || 'badge-morning';
-    
+
     return `<span class="badge ${badgeClass}">${shiftType}</span>`;
 }
 
@@ -605,29 +605,29 @@ function formatDate(dateString) {
     const day = String(date.getDate()).padStart(2, '0');
     const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
     const weekday = weekdays[date.getDay()];
-    
+
     return `${year}/${month}/${day} (${weekday})`;
 }
 
 async function addShift() {
     const employeeSelect = document.getElementById('employee-select');
     const selectedOption = employeeSelect.selectedOptions[0];
-    
+
     if (!selectedOption || !selectedOption.value) {
         showMessage(t('SHIFT_SELECT_EMPLOYEE'), 'error');
         return;
     }
-    
+
     const shiftType = document.getElementById('shift-type').value;
     const startTime = document.getElementById('start-time').value;
     const endTime = document.getElementById('end-time').value;
-    
+
     // 驗證時間欄位
     if (!startTime || !endTime) {
         showMessage(t('SHIFT_FILL_TIME'), 'error');
         return;
     }
-    
+
     // 驗證時間邏輯(結束時間應該晚於開始時間,除非是跨日班)
     if (startTime >= endTime && endTime !== '00:00') {
         const confirmCrossDay = confirm(t('SHIFT_CONFIRM_CROSS_DAY'));
@@ -635,10 +635,10 @@ async function addShift() {
             return;
         }
     }
-    
+
     const token = localStorage.getItem('sessionToken');
     const shiftNoteEl = document.getElementById('shift-note');
-    
+
     const shiftData = {
         action: 'addShift',
         token: token,
@@ -651,16 +651,16 @@ async function addShift() {
         location: document.getElementById('shift-location').value,
         note: shiftNoteEl ? shiftNoteEl.value : ''
     };
-    
+
     console.log('📝 新增排班:', shiftData);
-    
+
     try {
         const queryParams = new URLSearchParams(shiftData);
         const response = await fetch(`${apiUrl}?${queryParams}`);
         const data = await response.json();
-        
+
         console.log('✅ 新增回應:', data);
-        
+
         if (data.ok) {
             showMessage(t('SHIFT_ADD_SUCCESS'), 'success');
             resetForm();
@@ -678,26 +678,26 @@ async function addShift() {
 async function editShift(shiftId) {
     const shift = currentShifts.find(s => s.shiftId === shiftId);
     if (!shift) return;
-    
+
     switchTab('add');
-    
+
     document.querySelector('#add-tab h2').textContent = t('SHIFT_EDIT_TITLE');
     document.getElementById('employee-select').value = shift.employeeId;
     document.getElementById('shift-date').value = shift.date;
     document.getElementById('shift-type').value = shift.shiftType;
-    
+
     // 格式化時間
     document.getElementById('start-time').value = formatTimeOnly(shift.startTime);
     document.getElementById('end-time').value = formatTimeOnly(shift.endTime);
-    
+
     document.getElementById('shift-location').value = shift.location;
-    
+
     const shiftNoteEl = document.getElementById('shift-note');
     if (shiftNoteEl) shiftNoteEl.value = shift.note || '';
-    
+
     const submitBtn = document.querySelector('#add-shift-form button[type="submit"]');
     submitBtn.textContent = t('BTN_UPDATE_SHIFT');
-    submitBtn.onclick = function(e) {
+    submitBtn.onclick = function (e) {
         e.preventDefault();
         updateShift(shiftId);
     };
@@ -706,15 +706,15 @@ async function editShift(shiftId) {
 async function updateShift(shiftId) {
     const employeeSelect = document.getElementById('employee-select');
     const selectedOption = employeeSelect.selectedOptions[0];
-    
+
     if (!selectedOption || !selectedOption.value) {
         showMessage(t('SHIFT_SELECT_EMPLOYEE'), 'error');
         return;
     }
-    
+
     const token = localStorage.getItem('sessionToken');
     const shiftNoteEl = document.getElementById('shift-note');
-    
+
     const shiftData = {
         action: 'updateShift',
         token: token,
@@ -728,12 +728,12 @@ async function updateShift(shiftId) {
         location: document.getElementById('shift-location').value,
         note: shiftNoteEl ? shiftNoteEl.value : ''
     };
-    
+
     try {
         const queryParams = new URLSearchParams(shiftData);
         const response = await fetch(`${apiUrl}?${queryParams}`);
         const data = await response.json();
-        
+
         if (data.ok) {
             showMessage(t('SHIFT_UPDATE_SUCCESS'), 'success');
             resetForm();
@@ -750,14 +750,14 @@ async function updateShift(shiftId) {
 
 async function deleteShift(shiftId) {
     if (!confirm(t('SHIFT_DELETE_CONFIRM'))) return;
-    
+
     try {
         const token = localStorage.getItem('sessionToken');
         const url = `${apiUrl}?action=deleteShift&token=${token}&shiftId=${shiftId}`;
-        
+
         const response = await fetch(url);
         const data = await response.json();
-        
+
         if (data.ok) {
             showMessage(t('SHIFT_DELETE_SUCCESS'), 'success');
             loadShifts();
@@ -772,19 +772,19 @@ async function deleteShift(shiftId) {
 
 function filterShifts() {
     const filters = {};
-    
+
     const employeeEl = document.getElementById('filter-employee');
     const startDateEl = document.getElementById('filter-start-date');
     const endDateEl = document.getElementById('filter-end-date');
     const shiftTypeEl = document.getElementById('filter-shift-type');
     const locationEl = document.getElementById('filter-location');
-    
+
     if (employeeEl && employeeEl.value) filters.employeeId = employeeEl.value;
     if (startDateEl && startDateEl.value) filters.startDate = startDateEl.value;
     if (endDateEl && endDateEl.value) filters.endDate = endDateEl.value;
     if (shiftTypeEl && shiftTypeEl.value) filters.shiftType = shiftTypeEl.value;
     if (locationEl && locationEl.value) filters.location = locationEl.value;
-    
+
     console.log('🔍 篩選條件:', filters);
     loadShifts(filters);
 }
@@ -793,20 +793,20 @@ function clearFilters() {
     const employeeEl = document.getElementById('filter-employee');
     const shiftTypeEl = document.getElementById('filter-shift-type');
     const locationEl = document.getElementById('filter-location');
-    
+
     if (employeeEl) employeeEl.value = '';
     if (shiftTypeEl) shiftTypeEl.value = '';
     if (locationEl) locationEl.value = '';
-    
+
     // 重設為本週
     const startOfWeek = new Date();
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(endOfWeek.getDate() + 6);
-    
+
     document.getElementById('filter-start-date').value = startOfWeek.toISOString().split('T')[0];
     document.getElementById('filter-end-date').value = endOfWeek.toISOString().split('T')[0];
-    
+
     loadShifts();
 }
 
@@ -815,7 +815,7 @@ function exportShifts() {
         showMessage(t('SHIFT_NO_EXPORT_DATA'), 'error');
         return;
     }
-    
+
     const csv = convertToCSV(currentShifts);
     const filename = `排班表_${new Date().toISOString().split('T')[0]}.csv`;
     downloadCSV(csv, filename);
@@ -835,11 +835,11 @@ function convertToCSV(data) {
         shift.location,
         shift.note || ''
     ]);
-    
+
     const csvContent = [headers, ...rows]
         .map(row => row.map(cell => `"${cell}"`).join(','))
         .join('\n');
-    
+
     return '\ufeff' + csvContent;
 }
 
@@ -854,15 +854,15 @@ function downloadCSV(csv, filename) {
 function resetForm() {
     const form = document.getElementById('add-shift-form');
     if (form) form.reset();
-    
+
     document.querySelector('#add-tab h2').textContent = t('SHIFT_ADD_TITLE');
-    
+
     const submitBtn = document.querySelector('#add-shift-form button[type="submit"]');
     if (submitBtn) {
         submitBtn.textContent = t('BTN_ADD_SHIFT');
         submitBtn.onclick = null;
     }
-    
+
     const today = new Date().toISOString().split('T')[0];
     const shiftDateEl = document.getElementById('shift-date');
     if (shiftDateEl) shiftDateEl.value = today;
@@ -873,29 +873,29 @@ function resetForm() {
 function setupBatchUpload() {
     const uploadArea = document.getElementById('upload-area');
     const fileInput = document.getElementById('batch-file-input');
-    
+
     if (!uploadArea || !fileInput) return;
-    
-    uploadArea.addEventListener('dragover', function(e) {
+
+    uploadArea.addEventListener('dragover', function (e) {
         e.preventDefault();
         this.classList.add('drag-over');
     });
-    
-    uploadArea.addEventListener('dragleave', function() {
+
+    uploadArea.addEventListener('dragleave', function () {
         this.classList.remove('drag-over');
     });
-    
-    uploadArea.addEventListener('drop', function(e) {
+
+    uploadArea.addEventListener('drop', function (e) {
         e.preventDefault();
         this.classList.remove('drag-over');
-        
+
         const files = e.dataTransfer.files;
         if (files.length > 0) {
             handleBatchFile(files[0]);
         }
     });
-    
-    fileInput.addEventListener('change', function() {
+
+    fileInput.addEventListener('change', function () {
         if (this.files.length > 0) {
             handleBatchFile(this.files[0]);
         }
@@ -904,12 +904,12 @@ function setupBatchUpload() {
 
 function handleBatchFile(file) {
     const reader = new FileReader();
-    
-    reader.onload = function(e) {
+
+    reader.onload = function (e) {
         const content = e.target.result;
         parseBatchData(content, file.name);
     };
-    
+
     if (file.name.endsWith('.csv')) {
         reader.readAsText(file, 'UTF-8');
     } else {
@@ -920,18 +920,18 @@ function handleBatchFile(file) {
 function parseBatchData(content, filename) {
     // 移除 BOM (如果有的話)
     content = content.replace(/^\ufeff/, '');
-    
+
     const lines = content.split('\n');
     const data = [];
-    
+
     // 從第二行開始(跳過標題)
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
-        
+
         // ⭐ 正確處理 CSV 引號
         const values = parseCSVLine(line);
-        
+
         // 檢查是否有足夠的欄位(至少 7 個)
         if (values.length >= 7) {
             // 跳過排班ID欄位(第一個),從員工ID開始
@@ -945,21 +945,21 @@ function parseBatchData(content, filename) {
                 location: values[7] || '',  // 第 8 欄: 地點
                 note: values[8] || ''       // 第 9 欄: 備註
             };
-            
+
             // 驗證必填欄位
             if (shift.employeeId && shift.date && shift.shiftType) {
                 data.push(shift);
             } else {
-                console.warn('第 ' + (i+1) + ' 行資料不完整,已略過');
+                console.warn('第 ' + (i + 1) + ' 行資料不完整,已略過');
             }
         }
     }
-    
+
     if (data.length === 0) {
         showMessage(t('SHIFT_BATCH_NO_DATA'), 'error');
         return;
     }
-    
+
     batchData = data;
     displayBatchPreview(data);
 }
@@ -971,11 +971,11 @@ function parseCSVLine(line) {
     const values = [];
     let currentValue = '';
     let insideQuotes = false;
-    
+
     for (let i = 0; i < line.length; i++) {
         const char = line[i];
         const nextChar = line[i + 1];
-        
+
         if (char === '"') {
             if (insideQuotes && nextChar === '"') {
                 // 兩個連續的引號 = 一個引號字元
@@ -993,24 +993,24 @@ function parseCSVLine(line) {
             currentValue += char;
         }
     }
-    
+
     // 加入最後一個欄位
     values.push(currentValue.trim());
-    
+
     return values;
 }
 
 function displayBatchPreview(data) {
     const previewDiv = document.getElementById('batch-preview');
     const tableDiv = document.getElementById('preview-table');
-    
+
     if (!previewDiv || !tableDiv) return;
-    
+
     let html = '<table style="width: 100%; border-collapse: collapse;">';
     html += '<tr style="background: #f5f5f5;">';
     html += '<th>員工ID</th><th>員工姓名</th><th>日期</th><th>班別</th><th>上班時間</th><th>下班時間</th><th>地點</th>';
     html += '</tr>';
-    
+
     data.slice(0, 10).forEach(row => {
         html += '<tr style="border-bottom: 1px solid #eee;">';
         html += `<td>${row.employeeId}</td>`;
@@ -1022,13 +1022,13 @@ function displayBatchPreview(data) {
         html += `<td>${row.location}</td>`;
         html += '</tr>';
     });
-    
+
     if (data.length > 10) {
         html += `<tr><td colspan="7" style="text-align: center; padding: 10px; color: #666;">還有 ${data.length - 10} 筆資料...</td></tr>`;
     }
-    
+
     html += '</table>';
-    
+
     tableDiv.innerHTML = html;
     previewDiv.style.display = 'block';
     document.getElementById('upload-area').style.display = 'none';
@@ -1036,30 +1036,30 @@ function displayBatchPreview(data) {
 
 async function confirmBatchUpload() {
     if (batchData.length === 0) return;
-    
+
     try {
         const token = localStorage.getItem('sessionToken');
-        
+
         console.log('📤 準備上傳批量資料:', batchData.length, '筆');
-        
+
         // ⭐ 改用 GET 請求避免 CORS 問題
         // 將資料轉成 JSON 字串並編碼
         const shiftsJson = encodeURIComponent(JSON.stringify(batchData));
-        
+
         const url = `${apiUrl}?action=batchAddShifts&token=${token}&shiftsArray=${shiftsJson}`;
-        
+
         // 使用 JSONP 方式呼叫
         const callbackName = 'batchUploadCallback_' + Date.now();
-        
+
         return new Promise((resolve, reject) => {
             // 建立回調函數
-            window[callbackName] = function(data) {
+            window[callbackName] = function (data) {
                 console.log('📥 批量上傳回應:', data);
-                
+
                 // 清理
                 delete window[callbackName];
                 document.body.removeChild(script);
-                
+
                 if (data.ok) {
                     showMessage(data.msg || data.message || t('SHIFT_BATCH_UPLOAD_SUCCESS'), 'success');
                     cancelBatchUpload();
@@ -1071,21 +1071,21 @@ async function confirmBatchUpload() {
                     reject(new Error(data.msg));
                 }
             };
-            
+
             // 建立 script 標籤
             const script = document.createElement('script');
             script.src = url + `&callback=${callbackName}`;
-            script.onerror = function() {
+            script.onerror = function () {
                 console.error('❌ 批量上傳失敗: 無法載入腳本');
                 delete window[callbackName];
                 document.body.removeChild(script);
                 showMessage(t('SHIFT_BATCH_NETWORK_ERROR'), 'error');
                 reject(new Error('Network error'));
             };
-            
+
             document.body.appendChild(script);
         });
-        
+
     } catch (error) {
         console.error('❌ 批量上傳失敗:', error);
         showMessage(t('SHIFT_BATCH_UPLOAD_ERROR') + ': ' + error.message, 'error');
@@ -1097,7 +1097,7 @@ function cancelBatchUpload() {
     const previewDiv = document.getElementById('batch-preview');
     const uploadArea = document.getElementById('upload-area');
     const fileInput = document.getElementById('batch-file-input');
-    
+
     if (previewDiv) previewDiv.style.display = 'none';
     if (uploadArea) uploadArea.style.display = 'block';
     if (fileInput) fileInput.value = '';
@@ -1105,10 +1105,10 @@ function cancelBatchUpload() {
 
 function downloadTemplate() {
     const template = '排班ID,員工ID,員工姓名,日期,班別,上班時間,下班時間,地點,備註\n' +
-                    ',EMP001,張三,2025-10-25,早班,08:30,16:30,總公司,\n' +
-                    ',EMP002,李四,2025-10-25,全日班,08:30,17:30,分公司,\n' +
-                    ',EMP003,王五,2025-10-26,中班,12:00,20:00,總公司,';
-    
+        ',EMP001,張三,2025-10-25,早班,08:30,16:30,總公司,\n' +
+        ',EMP002,李四,2025-10-25,全日班,08:30,17:30,分公司,\n' +
+        ',EMP003,王五,2025-10-26,中班,12:00,20:00,總公司,';
+
     downloadCSV(template, '排班範本.csv');
 }
 
@@ -1119,7 +1119,7 @@ async function loadStats() {
     try {
         currentYear = new Date().getFullYear();
         currentMonth = new Date().getMonth();
-        
+
         updateMonthDisplay();
         await loadMonthlyStats();
         await loadMonthlyShifts();
@@ -1130,8 +1130,8 @@ async function loadStats() {
 }
 
 function updateMonthDisplay() {
-    const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', 
-                        '7月', '8月', '9月', '10月', '11月', '12月'];
+    const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月',
+        '7月', '8月', '9月', '10月', '11月', '12月'];
     const displayText = `${currentYear}年${monthNames[currentMonth]}`;
     const monthEl = document.getElementById('current-month');
     if (monthEl) monthEl.textContent = displayText;
@@ -1176,19 +1176,19 @@ async function loadMonthlyStats() {
         const token = localStorage.getItem('sessionToken');
         const startDate = new Date(currentYear, currentMonth, 1);
         const endDate = new Date(currentYear, currentMonth + 1, 0);
-        
+
         const queryParams = new URLSearchParams({
             action: 'getShifts',
             token: token,
             startDate: formatDateYMD(startDate),
             endDate: formatDateYMD(endDate)
         });
-        
+
         const response = await fetch(`${apiUrl}?${queryParams}`);
         const data = await response.json();
-        
+
         console.log('📊 月度統計:', data);
-        
+
         if (data.ok && data.data) {
             allMonthShifts = data.data;
             displayMonthlyStats(data.data);
@@ -1201,7 +1201,7 @@ async function loadMonthlyStats() {
 function displayMonthlyStats(shifts) {
     const statsGrid = document.getElementById('stats-grid');
     if (!statsGrid) return;
-    
+
     const stats = {
         total: shifts.length,
         morning: 0,
@@ -1211,9 +1211,9 @@ function displayMonthlyStats(shifts) {
         dayoff: 0,
         custom: 0
     };
-    
+
     shifts.forEach(shift => {
-        switch(shift.shiftType) {
+        switch (shift.shiftType) {
             case '早班': stats.morning++; break;
             case '中班': stats.afternoon++; break;
             case '晚班': stats.night++; break;
@@ -1222,7 +1222,7 @@ function displayMonthlyStats(shifts) {
             case '自訂': stats.custom++; break;
         }
     });
-    
+
     const html = `
         <div class="stat-card">
             <div class="stat-label">${t('SHIFT_STATS_TOTAL')}</div>
@@ -1251,16 +1251,16 @@ function displayMonthlyStats(shifts) {
         </div>
         ` : ''}
     `;
-    
+
     statsGrid.innerHTML = html;
 }
 
 async function loadMonthlyShifts() {
     const calendarGrid = document.getElementById('calendar-grid');
     if (!calendarGrid) return;
-    
+
     calendarGrid.innerHTML = '<div class="loading">載入月曆中</div>';
-    
+
     try {
         displayMonthCalendar(allMonthShifts);
     } catch (error) {
@@ -1272,28 +1272,28 @@ async function loadMonthlyShifts() {
 function displayMonthCalendar(shifts) {
     const calendarGrid = document.getElementById('calendar-grid');
     if (!calendarGrid) return;
-    
+
     const firstDay = new Date(currentYear, currentMonth, 1);
     const lastDay = new Date(currentYear, currentMonth + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
     const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
-    
+
     const today = new Date();
     const todayStr = formatDateYMD(today);
-    
+
     let html = '';
     let dayCounter = 1;
     let nextMonthDay = 1;
-    
+
     const totalCells = Math.ceil((daysInMonth + startingDayOfWeek) / 7) * 7;
-    
+
     for (let i = 0; i < totalCells; i++) {
         let dateStr = '';
         let dayNumber = '';
         let otherMonthClass = '';
         let isToday = false;
-        
+
         if (i < startingDayOfWeek) {
             dayNumber = prevMonthLastDay - startingDayOfWeek + i + 1;
             otherMonthClass = 'other-month';
@@ -1313,24 +1313,24 @@ function displayMonthCalendar(shifts) {
             dateStr = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
             nextMonthDay++;
         }
-        
+
         const dayShifts = shifts.filter(shift => {
             const shiftDate = new Date(shift.date);
             return formatDateYMD(shiftDate) === dateStr;
         });
-        
+
         const hasShifts = dayShifts.length > 0;
         const todayClass = isToday ? 'today' : '';
         const hasShiftsClass = hasShifts ? 'has-shifts' : '';
-        
+
         html += `
             <div class="calendar-day ${otherMonthClass} ${todayClass} ${hasShiftsClass}">
                 <div class="day-number">${dayNumber}</div>
                 <div class="day-shifts">
                     ${dayShifts.slice(0, 10).map(shift => {
-                        const startTime = formatTimeOnly(shift.startTime);
-                        const endTime = formatTimeOnly(shift.endTime);
-                        return `
+            const startTime = formatTimeOnly(shift.startTime);
+            const endTime = formatTimeOnly(shift.endTime);
+            return `
                         <div class="shift-item-mini ${getShiftClass(shift.shiftType)}" 
                              onclick="showShiftDetail('${shift.shiftId}')"
                              title="${shift.employeeName} - ${shift.shiftType} (${startTime}-${endTime})">
@@ -1343,7 +1343,7 @@ function displayMonthCalendar(shifts) {
             </div>
         `;
     }
-    
+
     calendarGrid.innerHTML = html;
 }
 
@@ -1364,22 +1364,22 @@ function showShiftDetail(shiftId) {
     if (shift) {
         const startTime = formatTimeOnly(shift.startTime);
         const endTime = formatTimeOnly(shift.endTime);
-        
+
         const detail = t('SHIFT_DETAIL_TITLE') + ':\n\n' +
-              t('SHIFT_EMPLOYEE_LABEL') + ': ' + shift.employeeName + '\n' +
-              t('SHIFT_DATE_LABEL') + ': ' + shift.date + '\n' +
-              t('SHIFT_TYPE_LABEL') + ': ' + shift.shiftType + '\n' +
-              t('SHIFT_TIME_LABEL') + ': ' + startTime + ' - ' + endTime + '\n' +
-              t('SHIFT_LOCATION_LABEL') + ': ' + shift.location + '\n' +
-              t('SHIFT_NOTE_LABEL') + ': ' + (shift.note || t('SHIFT_NO_NOTE'));
-        
+            t('SHIFT_EMPLOYEE_LABEL') + ': ' + shift.employeeName + '\n' +
+            t('SHIFT_DATE_LABEL') + ': ' + shift.date + '\n' +
+            t('SHIFT_TYPE_LABEL') + ': ' + shift.shiftType + '\n' +
+            t('SHIFT_TIME_LABEL') + ': ' + startTime + ' - ' + endTime + '\n' +
+            t('SHIFT_LOCATION_LABEL') + ': ' + shift.location + '\n' +
+            t('SHIFT_NOTE_LABEL') + ': ' + (shift.note || t('SHIFT_NO_NOTE'));
+
         alert(detail);
     }
 }
 async function loadShiftDistribution() {
     const distributionContainer = document.getElementById('shift-distribution');
     if (!distributionContainer) return;
-    
+
     displayShiftDistribution(allMonthShifts);
 }
 
@@ -1389,38 +1389,38 @@ function displayShiftDistribution(shifts) {
         if (distributionContainer) distributionContainer.innerHTML = '';
         return;
     }
-    
+
     const employeeStats = {};
-    const shiftTypeStats = { 
-        '早班': 0, 
-        '中班': 0, 
-        '晚班': 0, 
+    const shiftTypeStats = {
+        '早班': 0,
+        '中班': 0,
+        '晚班': 0,
         '全日班': 0,
         '排休': 0,
         '自訂': 0
     };
-    
+
     shifts.forEach(shift => {
         if (!employeeStats[shift.employeeName]) {
             employeeStats[shift.employeeName] = 0;
         }
         employeeStats[shift.employeeName]++;
-        
+
         if (shiftTypeStats[shift.shiftType] !== undefined) {
             shiftTypeStats[shift.shiftType]++;
         }
     });
-    
+
     const maxCount = Math.max(...Object.values(employeeStats), 1);
-    
+
     let html = '<div class="distribution-section">';
     html += '<h3 class="distribution-title">📊 本月員工排班分布</h3>';
     html += '<div class="distribution-bars">';
-    
+
     const sortedEmployees = Object.entries(employeeStats)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 15);
-    
+
     sortedEmployees.forEach(([name, count]) => {
         const percentage = (count / maxCount * 100).toFixed(0);
         html += `
@@ -1434,13 +1434,13 @@ function displayShiftDistribution(shifts) {
             </div>
         `;
     });
-    
+
     html += '</div></div>';
-    
+
     html += '<div class="distribution-section">';
     html += '<h3 class="distribution-title">🎨 本月班別分布</h3>';
     html += '<div class="shift-type-distribution">';
-    
+
     const totalShifts = Object.values(shiftTypeStats).reduce((a, b) => a + b, 0);
     const shiftTypeColors = {
         '早班': '#ff9800',
@@ -1450,11 +1450,11 @@ function displayShiftDistribution(shifts) {
         '排休': '#9e9e9e',
         '自訂': '#fbc02d'
     };
-    
+
     Object.entries(shiftTypeStats).forEach(([type, count]) => {
         const percentage = totalShifts > 0 ? (count / totalShifts * 100).toFixed(1) : 0;
         const color = shiftTypeColors[type];
-        
+
         html += `
             <div class="shift-type-stat">
                 <div class="shift-type-stat-header">
@@ -1468,9 +1468,9 @@ function displayShiftDistribution(shifts) {
             </div>
         `;
     });
-    
+
     html += '</div></div>';
-    
+
     distributionContainer.innerHTML = html;
 }
 
@@ -1490,12 +1490,12 @@ function formatDateYMD(date) {
  */
 function formatTimeOnly(timeValue) {
     if (!timeValue) return '--:--';
-    
+
     // 如果已經是 HH:MM 格式,直接返回
     if (typeof timeValue === 'string' && /^\d{2}:\d{2}$/.test(timeValue)) {
         return timeValue;
     }
-    
+
     // 如果是 ISO 格式字串
     if (typeof timeValue === 'string' && timeValue.includes('T')) {
         try {
@@ -1509,14 +1509,14 @@ function formatTimeOnly(timeValue) {
             return '--:--';
         }
     }
-    
+
     // 如果是 Date 物件
     if (timeValue instanceof Date) {
         const hours = String(timeValue.getHours()).padStart(2, '0');
         const minutes = String(timeValue.getMinutes()).padStart(2, '0');
         return `${hours}:${minutes}`;
     }
-    
+
     // 其他情況直接返回
     return String(timeValue);
 }
@@ -1539,9 +1539,9 @@ function showMessage(message, type = 'info') {
         z-index: 10000;
         animation: slideIn 0.3s ease;
     `;
-    
+
     document.body.appendChild(messageDiv);
-    
+
     setTimeout(() => {
         messageDiv.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => {
