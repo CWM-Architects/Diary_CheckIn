@@ -338,7 +338,29 @@ function getYmdFromRow(row) {
 }
 
 /** 取欄位：優先物件屬性，其次陣列索引 */
+
+/** 取欄位：優先物件屬性，其次陣列索引 */
 function pick(row, objKey, idx) {
   const v = row?.[objKey];
   return (v !== undefined && v !== null) ? v : row?.[idx];
+}
+
+/**
+ * 取得或建立工作表
+ * @param {string} sheetName 工作表名稱
+ * @param {Array} headers 標題列陣列 (可選)
+ * @return {GoogleAppsScript.Spreadsheet.Sheet} 工作表物件
+ */
+function getOrCreateSheet(sheetName, headers) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(sheetName);
+  
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    if (headers && headers.length > 0) {
+      sheet.appendRow(headers);
+    }
+  }
+  
+  return sheet;
 }
