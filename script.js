@@ -86,7 +86,7 @@ let weekShiftCache = null;  // 快取本週排班
 // 載入語系檔
 async function loadTranslations(lang) {
     try {
-        const res = await fetch(`https://CWM-Architects.github.io/Diary_CheckIn/i18n/${lang}.json`);
+        const res = await fetch(`https://cwm-architects.github.io/Diary_CheckIn/i18n/${lang}.json`);
         if (!res.ok) {
             throw new Error(`HTTP 錯誤: ${res.status}`);
         }
@@ -5823,4 +5823,5 @@ function toggleOCRDetails() {
         detailsDiv.classList.add('hidden');
         toggleIcon.textContent = '▶';
     }
+
 }
