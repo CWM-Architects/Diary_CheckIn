@@ -316,8 +316,17 @@ function doGet(e) {
       
       // ==================== 預設：返回 HTML 頁面 ====================
       default:
-        return HtmlService.createHtmlOutputFromFile('index')
-               .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+        // 如果有 action 但沒匹配到 case，代表是不支援的動作
+        if (action) {
+             return respond1({ ok: false, msg: "未知的 action: " + action });
+        }
+        
+        try {
+            return HtmlService.createHtmlOutputFromFile('index')
+                   .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+        } catch (e) {
+            return ContentService.createTextOutput("系統錯誤：找不到 index 頁面。請重新部署程式或是檢查檔案是否存在。錯誤訊息：" + e.message);
+        }
     }
   } catch (err) {
     return respond1({ ok: false, msg: err.message });
