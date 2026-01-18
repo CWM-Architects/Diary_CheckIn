@@ -1,4 +1,4 @@
-// Main.gs - 完整版（含打卡、加班、請假、排班系統 + IP驗證）
+// Main.gs - 完整版（含打卡、加班、請假、排班系統）
 
 // doGet(e) 負責處理所有外部請求
 function doGet(e) {
@@ -46,14 +46,6 @@ function doGet(e) {
         return respond1(handleAddLocation(e.parameter));
       case "getLocations":
         return respond1(handleGetLocation());
-      
-      // ==================== ⭐ IP 白名單管理（新增）====================
-      case "addIPToWhitelist":
-        return respond1(handleAddIPToWhitelist(e.parameter));
-      case "getIPWhitelist":
-        return respond1(handleGetIPWhitelist(e.parameter));
-      case "deleteIPFromWhitelist":
-        return respond1(handleDeleteIPFromWhitelist(e.parameter));
       
       // ==================== 員工管理 ====================
       case "getAllUsers":
@@ -110,6 +102,21 @@ function doGet(e) {
       case "initializeEmployeeLeave":
         return respond1(handleInitializeEmployeeLeave(e.parameter));
       
+      // ==================== 工作日誌系統（⭐ 新增在這裡）====================
+      case "submitWorklog":
+        return respond1(handleSubmitWorklog(e.parameter));
+      case "getWorklogs":
+        return respond1(handleGetWorklogs(e.parameter));
+      case "getWorklogDetail":
+        return respond1(handleGetWorklogDetail(e.parameter));
+      case "getPendingWorklogs":
+        return respond1(handleGetPendingWorklogs(e.parameter));
+      case "reviewWorklog":
+        return respond1(handleReviewWorklog(e.parameter));
+      case "getWorklogReport":
+        return respond1(handleGetWorklogReport(e.parameter));
+      case "getAllWorklogReport":  
+        return respond1(handleGetAllWorklogReport(e.parameter));
       // ==================== 排班系統 ====================
       case "addShift":
         return respond1(handleAddShift(e.parameter));
@@ -164,8 +171,6 @@ function doGet(e) {
       case "saveMonthlySalary":
         return saveMonthlySalaryAPI();
 
-      case "toggleUserStatus":
-        return respond1(handleToggleUserStatus(e.parameter));
       case 'exportAllSalaryExcel':
         try {
           Logger.log('📊 收到 exportAllSalaryExcel 请求');
@@ -290,8 +295,8 @@ function doGet(e) {
       // ==================== 費用管理系統 ====================
       case "submitAdvanceApplication":
         return respond1(handleSubmitAdvanceApplication(e.parameter));
-      // case "submitReimbursement":
-      //   return respond1(handleSubmitReimbursement(e.parameter));
+      case "submitReimbursement":
+        return respond1(handleSubmitReimbursement(e.parameter));
       case "getAdvanceRecords":
         return respond1(handleGetAdvanceRecords(e.parameter));
       case "getReimbursementRecords":
@@ -300,14 +305,6 @@ function doGet(e) {
         return respond1(handleReviewAdvanceApplication(e.parameter));
       case "reviewReimbursement":
         return respond1(handleReviewReimbursement(e.parameter));
-
-      case "getPendingAdvanceRequests":
-        return respond1(handleGetPendingAdvanceRequests(e.parameter));
-      case "getPendingReimbursementRequests":
-        return respond1(handleGetPendingReimbursementRequests(e.parameter));
-
-      case "invoiceOCR":
-        return respond1(handleInvoiceOCR(e.parameter));
       // ==================== 測試端點 ====================
       case "initApp":
         return respond1(handleInitApp(e.parameter));
@@ -316,124 +313,220 @@ function doGet(e) {
       
       // ==================== 預設：返回 HTML 頁面 ====================
       default:
-        // 如果有 action 但沒匹配到 case，代表是不支援的動作
-        if (action) {
-             return respond1({ ok: false, msg: "未知的 action: " + action });
-        }
-        
-        try {
-            return HtmlService.createHtmlOutputFromFile('index')
-                   .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-        } catch (e) {
-            return ContentService.createTextOutput("系統錯誤：找不到 index 頁面。請重新部署程式或是檢查檔案是否存在。錯誤訊息：" + e.message);
-        }
+        return HtmlService.createHtmlOutputFromFile('index')
+               .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
   } catch (err) {
     return respond1({ ok: false, msg: err.message });
   }
 }
 
+// Main.gs - 新增 LINE Bot Webhook 處理
+
+/**
+ * 處理 LINE Webhook 請求
+ */
 function doPost(e) {
   try {
     Logger.log('═══════════════════════════════════════');
-    Logger.log('📥 收到 POST 請求');
+    Logger.log('📥 收到 LINE Webhook 請求');
     Logger.log('═══════════════════════════════════════');
     
-    // ⭐ 步驟 1：解析請求資料
-    let requestData;
+    if (!e || !e.postData || !e.postData.contents) {
+      Logger.log('⚠️ 缺少 postData');
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'No postData'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
     
-    if (e.postData) {
-      Logger.log('📦 POST 資料類型:', e.postData.type);
-      Logger.log('📦 POST 資料長度:', e.postData.length);
+    Logger.log('📋 postData.contents: ' + e.postData.contents.substring(0, 200) + '...');
+    
+    const json = JSON.parse(e.postData.contents);
+    
+    Logger.log('📊 收到 ' + json.events.length + ' 個事件');
+    
+    // 🔧 修改：處理每個事件（加入去重機制）
+    json.events.forEach((event, index) => {
+      Logger.log('');
+      Logger.log(`📌 處理事件 ${index + 1}/${json.events.length}`);
+      Logger.log('   type: ' + event.type);
       
-      try {
-        const contents = e.postData.contents;
-        requestData = JSON.parse(contents);
-        Logger.log('✅ JSON 解析成功');
-        Logger.log('   action:', requestData.action);
-        Logger.log('   token:', requestData.token ? '有' : '無');
-        
-      } catch (parseError) {
-        Logger.log('❌ JSON 解析失敗:', parseError);
-        return createJSONResponse({ 
-          ok: false, 
-          msg: 'JSON 格式錯誤：' + parseError.toString() 
-        });
+      // ⭐⭐⭐ 新增：生成事件 ID 並檢查是否已處理
+      const eventId = event.webhookEventId || 
+                     `${event.timestamp}_${event.source.userId}_${event.type}`;
+      
+      Logger.log('   eventId: ' + eventId);
+      
+      if (isEventProcessed_(eventId)) {
+        Logger.log('⏭️ 跳過已處理的事件');
+        return;  // 跳過這個事件
       }
       
-    } else {
-      Logger.log('❌ 沒有 POST 資料');
-      return createJSONResponse({ 
-        ok: false, 
-        msg: '缺少 POST 資料' 
-      });
-    }
-    
-    // ⭐ 步驟 2：驗證必要參數
-    if (!requestData.action) {
-      return createJSONResponse({ 
-        ok: false, 
-        msg: '缺少 action 參數' 
-      });
-    }
-    
-    // ⭐⭐⭐ 步驟 3：路由到對應處理器（包含 invoiceOCR）
-    Logger.log('🔀 路由到處理器:', requestData.action);
-    
-    switch (requestData.action) {
-      // ⭐⭐⭐ 關鍵：新增 invoiceOCR case
-      case 'invoiceOCR':
-        Logger.log('📄 處理發票 OCR 請求');
-        const ocrResult = handleInvoiceOCR(requestData);
-        
-        // 檢查是否已是 ContentService
-        if (ocrResult && typeof ocrResult.getContent === 'function') {
-          Logger.log('✅ 返回 ContentService');
-          return ocrResult;
+      try {
+        if (event.type === 'message') {
+          if (event.message.type === 'text') {
+            Logger.log('   message.type: text');
+            Logger.log('   message.text: ' + event.message.text);
+            handleLineMessage(event);
+          } else if (event.message.type === 'location') {
+            Logger.log('   message.type: location');
+            Logger.log('   latitude: ' + event.message.latitude);
+            Logger.log('   longitude: ' + event.message.longitude);
+            handleLineLocation(event);
+          }
         }
-        
-        // 否則包裝成 JSON
-        Logger.log('⚠️ 包裝成 JSON');
-        return createJSONResponse(ocrResult);
-        
-      case 'submitReimbursement':
-        Logger.log('💰 處理報銷申請');
-        const reimbResult = handleSubmitReimbursement(requestData);
-        return createJSONResponse(reimbResult);
-        
-      default:
-        Logger.log('❌ 未知的 action:', requestData.action);
-        return createJSONResponse({ 
-          ok: false, 
-          msg: '未知的 action: ' + requestData.action 
-        });
-    }
+      } catch (eventError) {
+        Logger.log('❌ 事件處理錯誤: ' + eventError);
+        Logger.log('   錯誤堆疊: ' + eventError.stack);
+      }
+    });
+    
+    Logger.log('');
+    Logger.log('✅ Webhook 處理完成');
+    Logger.log('═══════════════════════════════════════');
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'ok'
+    })).setMimeType(ContentService.MimeType.JSON);
     
   } catch (error) {
     Logger.log('');
-    Logger.log('❌❌❌ doPost 發生錯誤:', error);
-    Logger.log('錯誤堆疊:', error.stack);
+    Logger.log('❌ doPost 錯誤: ' + error);
+    Logger.log('   錯誤訊息: ' + error.message);
+    Logger.log('   錯誤堆疊: ' + error.stack);
+    Logger.log('═══════════════════════════════════════');
     
-    return createJSONResponse({ 
-      ok: false, 
-      msg: '伺服器錯誤：' + error.toString() 
-    });
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }
-/**
- * ⭐ 輔助函數：建立 JSON 回應（移除 setHeaders）
- */
-function createJSONResponse(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+// function doPost(e) {
+//   try {
+//     Logger.log('═══════════════════════════════════════');
+//     Logger.log('📥 收到 LINE Webhook 請求');
+//     Logger.log('═══════════════════════════════════════');
+    
+//     // 檢查是否有 postData
+//     if (!e || !e.postData || !e.postData.contents) {
+//       Logger.log('⚠️ 缺少 postData');
+//       return ContentService.createTextOutput(JSON.stringify({
+//         status: 'error',
+//         message: 'No postData'
+//       })).setMimeType(ContentService.MimeType.JSON);
+//     }
+    
+//     Logger.log('📋 postData.contents: ' + e.postData.contents.substring(0, 200) + '...');
+    
+//     // 解析 JSON
+//     const json = JSON.parse(e.postData.contents);
+    
+//     Logger.log('📊 收到 ' + json.events.length + ' 個事件');
+    
+//     // ⚠️ 測試期間暫時停用 Signature 驗證
+//     // 正式上線後請啟用以下程式碼：
+//     /*
+//     const signature = e.parameter.signature || e.headers['X-Line-Signature'];
+//     if (!verifyLineSignature_(e.postData.contents, signature)) {
+//       Logger.log('❌ Signature 驗證失敗');
+//       return ContentService.createTextOutput(JSON.stringify({
+//         status: 'error',
+//         message: 'Invalid signature'
+//       })).setMimeType(ContentService.MimeType.JSON);
+//     }
+//     */
+    
+//     // 處理每個事件
+//     json.events.forEach((event, index) => {
+//       Logger.log('');
+//       Logger.log(`📌 處理事件 ${index + 1}/${json.events.length}`);
+//       Logger.log('   type: ' + event.type);
+      
+//       try {
+//         if (event.type === 'message') {
+//           if (event.message.type === 'text') {
+//             Logger.log('   message.type: text');
+//             Logger.log('   message.text: ' + event.message.text);
+//             handleLineMessage(event);
+//           } else if (event.message.type === 'location') {
+//             Logger.log('   message.type: location');
+//             Logger.log('   latitude: ' + event.message.latitude);
+//             Logger.log('   longitude: ' + event.message.longitude);
+//             handleLineLocation(event);
+//           }
+//         }
+//       } catch (eventError) {
+//         Logger.log('❌ 事件處理錯誤: ' + eventError);
+//         Logger.log('   錯誤堆疊: ' + eventError.stack);
+//       }
+//     });
+    
+//     Logger.log('');
+//     Logger.log('✅ Webhook 處理完成');
+//     Logger.log('═══════════════════════════════════════');
+    
+//     // ⭐⭐⭐ 關鍵：回傳 200 OK + JSON
+//     return ContentService.createTextOutput(JSON.stringify({
+//       status: 'ok'
+//     })).setMimeType(ContentService.MimeType.JSON);
+    
+//   } catch (error) {
+//     Logger.log('');
+//     Logger.log('❌ doPost 錯誤: ' + error);
+//     Logger.log('   錯誤訊息: ' + error.message);
+//     Logger.log('   錯誤堆疊: ' + error.stack);
+//     Logger.log('═══════════════════════════════════════');
+    
+//     // 即使錯誤也回傳 200 OK（避免 LINE 重試）
+//     return ContentService.createTextOutput(JSON.stringify({
+//       status: 'error',
+//       message: error.message
+//     })).setMimeType(ContentService.MimeType.JSON);
+//   }
+// }
+
+// function doPost(e) {
+//   try {
+//     const json = JSON.parse(e.postData.contents);
+    
+//     // 驗證 LINE Signature（安全性）
+//     const signature = e.parameter.signature || e.headers['X-Line-Signature'];
+//     if (!verifyLineSignature_(e.postData.contents, signature)) {
+//       return ContentService.createTextOutput(JSON.stringify({ error: 'Invalid signature' }))
+//         .setMimeType(ContentService.MimeType.JSON);
+//     }
+    
+//     // 處理 LINE 事件
+//     json.events.forEach(event => {
+//       if (event.type === 'message' && event.message.type === 'text') {
+//         handleLineMessage(event);
+//       } else if (event.type === 'message' && event.message.type === 'location') {
+//         handleLineLocation(event);
+//       }
+//     });
+    
+//     return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+//       .setMimeType(ContentService.MimeType.JSON);
+      
+//   } catch (error) {
+//     Logger.log('❌ Webhook 錯誤: ' + error);
+//     return ContentService.createTextOutput(JSON.stringify({ error: error.message }))
+//       .setMimeType(ContentService.MimeType.JSON);
+//   }
+// }
 
 /**
  * 驗證 LINE Signature（測試模式：暫時停用）
  */
+/**
+ * ⚠️ Signature 驗證（測試模式：已停用）
+ * 
+ * 正式上線時請啟用此函數
+ */
 function verifyLineSignature_(body, signature) {
-  // ⚠️ 測試期間暫時返回 true
+  // 測試期間暫時返回 true
   Logger.log('⚠️ Signature 驗證已暫時停用（測試模式）');
   return true;
   
@@ -461,104 +554,42 @@ function verifyLineSignature_(body, signature) {
   }
   */
 }
+// function verifyLineSignature_(body, signature) {
+//   // ⚠️ 測試期間暫時返回 true
+//   Logger.log('⚠️ Signature 驗證已暫時停用（測試模式）');
+//   return true;
 
+//   /* 
+//   // ✅ 正式上線時請啟用以下程式碼：
+//   try {
+//     const channelSecret = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_SECRET');
+    
+//     if (!channelSecret) {
+//       Logger.log('❌ 找不到 LINE_CHANNEL_SECRET');
+//       return false;
+//     }
+    
+//     const hash = Utilities.computeHmacSha256Signature(body, channelSecret);
+//     const expectedSignature = Utilities.base64Encode(hash);
+    
+//     Logger.log('🔐 Expected Signature: ' + expectedSignature);
+//     Logger.log('🔐 Received Signature: ' + signature);
+    
+//     return expectedSignature === signature;
+    
+//   } catch (error) {
+//     Logger.log('❌ Signature 驗證錯誤: ' + error);
+//     return false;
+//   }
+//   */
+// }
 
-// ==================== ⭐ IP 白名單管理 Handler（新增）====================
-
-/**
- * 處理新增 IP 到白名單
- */
-function handleAddIPToWhitelist(params) {
-  try {
-    if (!params.token || !validateSession(params.token)) {
-      return { ok: false, code: "ERR_SESSION_INVALID", msg: "未授權或 session 已過期" };
-    }
-    
-    const ipRange = params.ipRange;
-    const description = params.description || '';
-    
-    if (!ipRange) {
-      return { ok: false, msg: "缺少 IP 範圍參數" };
-    }
-    
-    // 呼叫核心函數（假設在 Code.gs 中實作）
-    const result = addIPToWhitelist(params.token, ipRange, description);
-    return result;
-    
-  } catch (error) {
-    Logger.log('❌ handleAddIPToWhitelist 錯誤: ' + error);
-    return { ok: false, msg: error.message };
-  }
-}
-
-/**
- * 處理取得 IP 白名單
- */
-function handleGetIPWhitelist(params) {
-  try {
-    if (!params.token || !validateSession(params.token)) {
-      return { ok: false, code: "ERR_SESSION_INVALID", msg: "未授權或 session 已過期" };
-    }
-    
-    // 呼叫核心函數
-    const result = getIPWhitelist(params.token);
-    return result;
-    
-  } catch (error) {
-    Logger.log('❌ handleGetIPWhitelist 錯誤: ' + error);
-    return { ok: false, msg: error.message };
-  }
-}
-
-/**
- * 處理刪除 IP 白名單
- */
-function handleDeleteIPFromWhitelist(params) {
-  try {
-    if (!params.token || !validateSession(params.token)) {
-      return { ok: false, code: "ERR_SESSION_INVALID", msg: "未授權或 session 已過期" };
-    }
-    
-    const rowNumber = parseInt(params.rowNumber);
-    
-    if (!rowNumber) {
-      return { ok: false, msg: "缺少行號參數" };
-    }
-    
-    // 呼叫核心函數
-    const result = deleteIPFromWhitelist(params.token, rowNumber);
-    return result;
-    
-  } catch (error) {
-    Logger.log('❌ handleDeleteIPFromWhitelist 錯誤: ' + error);
-    return { ok: false, msg: error.message };
-  }
-}
-
-/**
- * ⭐ 修正：處理打卡（加入 IP 參數）
- */
-function handlePunch(params) {
-  try {
-    if (!params.token || !validateSession(params.token)) {
-      return { ok: false, code: "ERR_SESSION_INVALID" };
-    }
-    
-    const type = params.type;
-    const lat = parseFloat(params.lat);
-    const lng = parseFloat(params.lng);
-    const note = params.note || '';
-    const clientIP = params.ip || '';  // ⭐ 新增 IP 參數
-    
-    // 呼叫核心打卡函數（需要修改 punch 函數以接收 clientIP）
-    const result = punch(params.token, type, lat, lng, note, clientIP);
-    return result;
-    
-  } catch (error) {
-    Logger.log('❌ handlePunch 錯誤: ' + error);
-    return { ok: false, msg: error.message };
-  }
-}
+// function verifyLineSignature_(body, signature) {
+//   const channelSecret = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_SECRET');
+//   const hash = Utilities.computeHmacSha256Signature(body, channelSecret);
+//   const expectedSignature = Utilities.base64Encode(hash);
+//   return expectedSignature === signature;
+// }
 
 // ==================== 排班系統 Handler 函數 ====================
 
@@ -1053,124 +1084,4 @@ function testLineBotLocation() {
   Logger.log('');
   Logger.log('📤 結果:');
   Logger.log(result.getContent());
-}
-
-/**
- * 🧪 測試 doPost
- */
-function testDoPost() {
-  Logger.log('🧪 測試 doPost 函數');
-  Logger.log('');
-  
-  // 模擬 POST 請求
-  const mockEvent = {
-    postData: {
-      type: 'application/json',
-      length: 100,
-      contents: JSON.stringify({
-        action: 'invoiceOCR',
-        token: 'test-token-123',
-        imageData: 'test-base64-data',
-        fileName: 'test.jpg'
-      })
-    }
-  };
-  
-  Logger.log('📥 模擬請求:');
-  Logger.log(JSON.stringify(mockEvent, null, 2));
-  Logger.log('');
-  
-  const response = doPost(mockEvent);
-  
-  Logger.log('');
-  Logger.log('📤 回應:');
-  Logger.log(response.getContent());
-  Logger.log('');
-  
-  const headers = response.getHeaders();
-  Logger.log('📋 回應標頭:');
-  for (const key in headers) {
-    Logger.log('   ' + key + ': ' + headers[key]);
-  }
-}
-
-
-function testDoPostFixed() {
-  Logger.log('🧪 測試修正後的 doPost');
-  Logger.log('');
-  
-  const mockEvent = {
-    postData: {
-      type: 'application/json',
-      length: 100,
-      contents: JSON.stringify({
-        action: 'invoiceOCR',
-        token: 'a0b545a8-b0a3-43ae-b97c-927376befa9d',  // ⚠️ 替換成有效的 token
-        imageData: 'test-base64-data',
-        fileName: 'test.jpg'
-      })
-    }
-  };
-  
-  const response = doPost(mockEvent);
-  
-  Logger.log('📤 回應內容:');
-  Logger.log(response.getContent());
-}
-
-
-/**
- * 🧪 測試 doPost - 使用真實的 Base64 圖片
- */
-function testDoPostWithRealImage() {
-  Logger.log('🧪 測試修正後的 doPost（真實圖片）');
-  Logger.log('');
-  
-  // ⭐ 這是一個 1x1 像素的紅色 JPEG 圖片的 Base64
-  const realBase64Image = '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAA//2Q==';
-  
-  // ⭐ 使用有效的 token（請替換成你的真實 token）
-  const validToken = 'a0b545a8-b0a3-43ae-b97c-927376befa9d';  // ⚠️ 請替換
-  
-  Logger.log('📋 測試資訊:');
-  Logger.log('   Base64 長度:', realBase64Image.length);
-  Logger.log('   Token:', validToken.substring(0, 20) + '...');
-  Logger.log('');
-  
-  const mockEvent = {
-    postData: {
-      type: 'application/json',
-      length: 500,
-      contents: JSON.stringify({
-        action: 'invoiceOCR',
-        token: validToken,
-        imageData: realBase64Image,
-        fileName: 'test_invoice.jpg'
-      })
-    }
-  };
-  
-  Logger.log('📤 開始測試...');
-  Logger.log('');
-  
-  const response = doPost(mockEvent);
-  
-  Logger.log('');
-  Logger.log('📤 回應內容:');
-  const responseText = response.getContent();
-  Logger.log(responseText);
-  
-  // 解析回應
-  try {
-    const result = JSON.parse(responseText);
-    Logger.log('');
-    if (result.ok) {
-      Logger.log('✅✅✅ 測試成功！');
-      Logger.log('OCR 結果:', JSON.stringify(result.data, null, 2));
-    } else {
-      Logger.log('❌ 測試失敗:', result.msg);
-    }
-  } catch (e) {
-    Logger.log('❌ 無法解析回應:', e);
-  }
 }
