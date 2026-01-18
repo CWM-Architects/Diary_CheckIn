@@ -137,7 +137,16 @@ function doGet(e) {
       case "exportShifts":
         return respond1(handleExportShifts(e.parameter));
       
+      // ==================== IP 白名單系統 ====================
+      case "addIPToWhitelist":
+        return respond1(addIPToWhitelist(e.parameter.token, e.parameter.ipRange, e.parameter.description));
+      case "getIPWhitelist":
+        return respond1(getIPWhitelist(e.parameter.token));
+      case "deleteIPFromWhitelist":
+        return respond1(deleteIPFromWhitelist(e.parameter.token, e.parameter.rowNumber));
+
       // ==================== 薪資系統 ====================
+
       case "setEmployeeSalaryTW":
         return respond1(handleSetEmployeeSalaryTW(e.parameter));
       case "getEmployeeSalaryTW":
