@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打卡系統 - LIFF</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
+        <h1 class="text-2xl font-bold mb-6 text-blue-600">📍 LIFF 智慧打卡</h1>
+        
+        <div id="status-container" class="mb-6">
+            <div id="loading" class="flex flex-col items-center">
+                <div class="loading-spinner mb-2"></div>
+                <p class="text-gray-500" id="loading-text">正在初始化 LIFF...</p>
+            </div>
+            
+            <div id="main-content" class="hidden">
+                <p class="text-lg font-medium text-gray-800 mb-2">您好，<span id="user-name">使用者</span></p>
+                <div class="bg-blue-50 p-4 rounded-lg mb-4 text-left">
+                    <p class="text-sm text-gray-600">🌐 目前 IP: <span id="client-ip" class="font-mono font-bold">讀取中...</span></p>
+                    <p class="text-sm text-gray-600">📍 定位狀態: <span id="location-status" class="font-bold">等待中...</span></p>
+                </div>
+                
+                <div class="space-y-4">
+                    <button id="punch-in-btn" class="w-full py-4 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xl font-bold transition-all transform active:scale-95 shadow-md">
+                        上班打卡
+                    </button>
+                    <button id="punch-out-btn" class="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xl font-bold transition-all transform active:scale-95 shadow-md">
+                        下班打卡
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="message-el" class="mt-4 p-3 rounded-lg hidden"></div>
+        
+        <p class="mt-8 text-xs text-gray-400">© 2026 Diary Check-In System</p>
+    </div>
+
+    <script>
+        const LIFF_ID = "2008825122-ynaEeEG3";
+        let userProfile = null;
+        let userIp = "";
+        let userLat = 0;
+        let userLng = 0;
+
+        async function init() {
+            try {
+                // 1. 初始化 LIFF
+                await liff.init({ liffId: LIFF_ID });
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
+                
+                userProfile = await liff.getProfile();
+                document.getElementById('user-name').textContent = userProfile.displayName;
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('main-content').classList.remove('hidden');
+
+                // 2. 獲取使用者 IP
+                getClientIp();
+                
+                // 3. 綁定按鈕
+                document.getElementById('punch-in-btn').onclick = () => doPunch('上班');
+                document.getElementById('punch-out-btn').onclick = () => doPunch('下班');
+
+            } catch (err) {
+                showMessage("初始化失敗: " + err.message, "error");
+            }
+        }
+
+        async function getClientIp() {
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                const data = await res.json();
+                userIp = data.ip;
+                document.getElementById('client-ip').textContent = userIp;
+            } catch (err) {
+                document.getElementById('client-ip').textContent = "無法取得 (請檢查網路)";
+                showMessage("無法取得您的 IP，可能會導致驗證失敗", "warning");
+            }
+        }
+
+        function showMessage(msg, type) {
+            const el = document.getElementById('message-el');
+            el.textContent = msg;
+            el.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-yellow-100', 'text-yellow-700');
+            
+            if (type === 'error') el.classList.add('bg-red-100', 'text-red-700');
+            else if (type === 'success') el.classList.add('bg-green-100', 'text-green-700');
+            else el.classList.add('bg-yellow-100', 'text-yellow-700');
+            
+            el.classList.remove('hidden');
+        }
+
+        function doPunch(type) {
+            const btnIn = document.getElementById('punch-in-btn');
+            const btnOut = document.getElementById('punch-out-btn');
+            
+            btnIn.disabled = true;
+            btnOut.disabled = true;
+            
+            document.getElementById('location-status').textContent = "取得座標中...";
+            
+            if (!navigator.geolocation) {
+                showMessage("您的瀏覽器不支援定位", "error");
+                btnIn.disabled = false; btnOut.disabled = false;
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    userLat = pos.coords.latitude;
+                    userLng = pos.coords.longitude;
+                    document.getElementById('location-status').textContent = `成功 (${userLat.toFixed(4)}, ${userLng.toFixed(4)})`;
+                    
+                    try {
+                        showMessage(`正在為 ${type} 打卡...`, "warning");
+                        
+                        // 構建 API URL
+                        const baseUrl = window.location.href.split('?')[0];
+                        const url = `${baseUrl}?action=punchFromLiff&userId=${userProfile.userId}&type=${encodeURIComponent(type)}&lat=${userLat}&lng=${userLng}&ip=${userIp}`;
+                        
+                        console.log("Calling URL:", url);
+                        
+                        const response = await fetch(url);
+                        const result = await response.json();
+                        
+                        if (result.ok) {
+                            showMessage(`打卡成功！您現在可以關閉視窗`, "success");
+                            setTimeout(() => liff.closeWindow(), 2000);
+                        } else {
+                            showMessage("打卡失敗: " + (result.msg || result.code), "error");
+                            btnIn.disabled = false; btnOut.disabled = false;
+                        }
+                    } catch (err) {
+                        showMessage("伺服器連線失敗", "error");
+                        btnIn.disabled = false; btnOut.disabled = false;
+                    }
+                },
+                (err) => {
+                    document.getElementById('location-status').textContent = "取得座標失敗";
+                    showMessage("請務必允許定位權限才能打卡", "error");
+                    btnIn.disabled = false; btnOut.disabled = false;
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        init();
+    </script>
+</body>
+</html>
