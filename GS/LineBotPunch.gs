@@ -439,12 +439,14 @@ function executePunch(userId, punchType, lat, lng, locationName) {
 }
 
 /**
- * 發送打卡位置請求
+ * 發送打卡位置請求 (LIFF 修正版)
  */
 function sendPunchLocationRequest(replyToken, employeeName, punchType) {
+  const liffUrl = `https://liff.line.me/2008825122-ynaEeEG3`;
+  
   const message = {
     type: 'flex',
-    altText: '請傳送您的位置以完成打卡',
+    altText: '請點擊按鈕開啟打卡頁面',
     contents: {
       type: 'bubble',
       size: 'mega',
@@ -454,7 +456,7 @@ function sendPunchLocationRequest(replyToken, employeeName, punchType) {
         contents: [
           {
             type: 'text',
-            text: '📍 請傳送位置',
+            text: '📍 智慧打卡 (WIFI 驗證)',
             weight: 'bold',
             size: 'xl',
             color: '#FFFFFF'
@@ -495,28 +497,21 @@ function sendPunchLocationRequest(replyToken, employeeName, punchType) {
             contents: [
               {
                 type: 'text',
-                text: '📱 如何傳送位置？',
+                text: '💡 使用說明：',
                 weight: 'bold',
                 size: 'md',
                 color: '#2196F3'
               },
               {
                 type: 'text',
-                text: '1. 點擊下方「＋」按鈕',
+                text: '1. 點擊下方「啟動打卡網頁」',
                 size: 'sm',
                 color: '#666666',
                 margin: 'md'
               },
               {
                 type: 'text',
-                text: '2. 選擇「位置資訊」',
-                size: 'sm',
-                color: '#666666',
-                margin: 'sm'
-              },
-              {
-                type: 'text',
-                text: '3. 傳送您的目前位置',
+                text: '2. 系統將自動驗證 WIFI IP 與 GPS',
                 size: 'sm',
                 color: '#666666',
                 margin: 'sm'
@@ -524,16 +519,28 @@ function sendPunchLocationRequest(replyToken, employeeName, punchType) {
             ]
           },
           {
+            type: 'button',
+            action: {
+              type: 'uri',
+              label: '啟動打卡網頁',
+              uri: liffUrl
+            },
+            style: 'primary',
+            color: '#2196F3',
+            margin: 'xl'
+          },
+          {
             type: 'separator',
             margin: 'lg'
           },
           {
             type: 'text',
-            text: '⚠️ 請確保您在公司打卡範圍內',
+            text: '⚠️ 請務必連接公司 WIFI 網路',
             size: 'xs',
             color: '#FF9800',
             margin: 'lg',
-            wrap: true
+            wrap: true,
+            align: 'center'
           }
         ]
       }
